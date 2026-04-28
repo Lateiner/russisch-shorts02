@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satzbau-Baukasten: ляпнуть</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--card);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .sentence-display {
+            min-height: 100px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            padding: 15px;
+            background: #fdfdfd;
+        }
+
+        .word-pool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            min-height: 120px;
+        }
+
+        .word-tile {
+            background: #fff;
+            border: 2px solid var(--primary);
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--primary);
+            transition: all 0.2s;
+            user-select: none;
+            font-size: 1rem;
+        }
+
+        .word-tile.placed {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+            cursor: default;
+        }
+
+        .word-tile.shake {
+            animation: shake 0.4s;
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .feedback-area {
+            height: 30px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .btn-next {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            width: 100%;
+            font-size: 1.1rem;
+        }
+
+        .progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="progress" id="progress">Satz 1 von 6</div>
+    <h2 style="margin-top:0;">Ordne den Satz</h2>
+    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">Klicke die Wörter in der richtigen Reihenfolge an.</p>
+
+    <div class="sentence-display" id="display"></div>
+    <div class="feedback-area" id="feedback"></div>
+    <div class="word-pool" id="pool"></div>
+
+    <button class="btn-next" id="next-btn" onclick="nextLevel()">Nächster Satz</button>
+</div>
+
+<script>
+    const levels = [
+        { correct: ["Я", "случайно", "ляпнул", "об", "этом"] },
+        { correct: ["На", "экзамене", "я", "ляпнула", "такую", "глупость"] },
+        { correct: ["Ваня", "рассказал", "мне", "свой", "секрет"] },
+        { correct: ["Об", "этом", "говорить", "нельзя"] },
+        { correct: ["Я", "не", "подумала", "о", "последствиях"] },
+        { correct: ["Напишите", "ваш", "пример", "в", "комментариях"] }
+    ];
+
+    let currentLevel = 0;
+    let currentWordIndex = 0;
+
+    function initLevel() {
+        const q = levels[currentLevel];
+        document.getElementById('progress').innerText = `Satz ${currentLevel + 1} von ${levels.length}`;
+        document.getElementById('display').innerHTML = "";
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('next-btn').style.display = "none";
+        currentWordIndex = 0;
+
+        // Wörter mischen
+        const poolWords = [...q.correct].sort(() => Math.random() - 0.5);
+        const pool = document.getElementById('pool');
+        pool.innerHTML = "";
+        
+        poolWords.forEach((word) => {
+            const tile = document.createElement('div');
+            tile.className = 'word-tile';
+            tile.innerText = word;
+            tile.onclick = () => handleWordClick(word, tile);
+            pool.appendChild(tile);
+        });
+    }
+
+    function handleWordClick(word, tile) {
+        const correctWord = levels[currentLevel].correct[currentWordIndex];
+
+        if (word === correctWord) {
+            tile.remove();
+            const placedTile = document.createElement('div');
+            placedTile.className = 'word-tile placed';
+            placedTile.innerText = word;
+            document.getElementById('display').appendChild(placedTile);
+            
+            currentWordIndex++;
+            showFeedback("Richtig! ✅", "var(--success)");
+
+            if (currentWordIndex === levels[currentLevel].correct.length) {
+                showFeedback("Sehr gut! Der Satz ist fertig.", "var(--success)");
+                document.getElementById('next-btn').style.display = "block";
+            }
+        } else {
+            tile.classList.add('shake');
+            showFeedback("Falsche Reihenfolge! ❌", "var(--error)");
+            setTimeout(() => { tile.classList.remove('shake'); }, 400);
+        }
+    }
+
+    function showFeedback(text, color) {
+        const fb = document.getElementById('feedback');
+        fb.innerText = text;
+        fb.style.color = color;
+    }
+
+    function nextLevel() {
+        currentLevel++;
+        if (currentLevel < levels.length) {
+            initLevel();
+        } else {
+            document.querySelector('.container').innerHTML = `
+                <div style="padding: 20px;">
+                    <h2 style="color: var(--success);">Geschafft!</h2>
+                    <p>Du hast alle 6 Sätze korrekt zusammengesetzt.</p>
+                    <button class="btn-next" style="display:block; margin-top:20px;" onclick="location.reload()">Nochmal üben</button>
+                </div>
+            `;
+        }
+    }
+
+    initLevel();
+</script>
+
+</body>
+</html>

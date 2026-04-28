@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Quiz: Das Verb ляпнуть</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #22c55e;
+            --error-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+        }
+
+        .quiz-container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .progress {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .russian-highlight {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: block;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            flex-grow: 1;
+        }
+
+        .option-btn {
+            background-color: var(--card-bg);
+            border: 2px solid #e2e8f0;
+            padding: 0.8rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        @media (hover: hover) {
+            .option-btn:hover:not(:disabled) {
+                border-color: var(--primary-color);
+                background-color: #eff6ff;
+            }
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+        }
+
+        #feedback-area {
+            margin-top: 1.5rem;
+            text-align: center;
+            min-height: 60px;
+        }
+
+        .next-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container" id="quiz-box">
+    <div class="progress" id="progress">Frage 1 von 6</div>
+    <div id="game-content">
+        <div class="question-text" id="question">Lade Aufgabe...</div>
+        <div class="options-list" id="options"></div>
+        <div id="feedback-area">
+            <div id="feedback-text" style="margin-bottom: 10px; font-weight: bold;"></div>
+            <button id="next-btn" class="next-btn hidden">Nächste Frage</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        {
+            q: "Was ist die Hauptbedeutung des Verbs?",
+            highlight: "ляпнуть",
+            options: ["Etwas gründlich planen", "Etwas sagen, ohne nachzudenken", "Jemanden laut rufen"],
+            correct: 1
+        },
+        {
+            q: "Wanja hat mir ein Geheimnis erzählt, aber ich habe es aus Versehen ausgeplaudert. Welcher Satz passt?",
+            highlight: "",
+            options: ["Я случайно ляпнул об этом Тане.", "Я долго думал об этом секрете.", "Я не говорил Тане о секрете."],
+            correct: 0
+        },
+        {
+            q: "Was bedeutet dieser Satz?",
+            highlight: "На экзамене я ляпнула такую глупость.",
+            options: ["Ich war in der Prüfung sehr klug.", "Ich habe die Prüfung verpasst.", "Ich habe in der Prüfung Blödsinn verzapft."],
+            correct: 2
+        },
+        {
+            q: "In welcher Situation verwendet man das Verb eher?",
+            highlight: "ляпнуть",
+            options: ["Bei einer formellen Rede im Kreml", "Im lockeren Gespräch mit Freunden", "Beim Schreiben einer wissenschaftlichen Arbeit"],
+            correct: 1
+        },
+        {
+            q: "Ergänze den Satz sinnvoll:",
+            highlight: "Ой, извини, я не хотел этого говорить, просто ...",
+            options: ["написал", "ляпнул", "подумал"],
+            correct: 1
+        },
+        {
+            q: "Welches deutsche Wort beschreibt das Verb am schlechtesten?",
+            highlight: "ляпнуть",
+            options: ["Herausplatzen", "Verzapfen", "Analysieren"],
+            correct: 2
+        }
+    ];
+
+    let currentIdx = 0;
+
+    function loadQuestion() {
+        const qData = questions[currentIdx];
+        document.getElementById('progress').innerText = `Frage ${currentIdx + 1} von ${questions.length}`;
+        document.getElementById('question').innerHTML = qData.q + (qData.highlight ? `<span class="russian-highlight">${qData.highlight}</span>` : "");
+        
+        const optionsContainer = document.getElementById('options');
+        optionsContainer.innerHTML = "";
+        
+        qData.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(index);
+            optionsContainer.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('feedback-text').innerText = "";
+    }
+
+    function checkAnswer(selectedIdx) {
+        const correctIdx = questions[currentIdx].correct;
+        const buttons = document.querySelectorAll('.option-btn');
+        
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (selectedIdx === correctIdx) {
+            buttons[selectedIdx].classList.add('correct');
+            document.getElementById('feedback-text').innerText = "Richtig! ✅";
+            document.getElementById('feedback-text').style.color = "var(--success-color)";
+        } else {
+            buttons[selectedIdx].classList.add('wrong');
+            buttons[correctIdx].classList.add('correct');
+            document.getElementById('feedback-text').innerText = "Nicht ganz. Siehe richtige Antwort oben.";
+            document.getElementById('feedback-text').style.color = "var(--error-color)";
+        }
+
+        document.getElementById('next-btn').classList.remove('hidden');
+        if (currentIdx === questions.length - 1) {
+            document.getElementById('next-btn').innerText = "Quiz beenden";
+        }
+    }
+
+    document.getElementById('next-btn').onclick = () => {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            document.getElementById('game-content').innerHTML = `
+                <div style="text-align:center; padding: 20px;">
+                    <h2>Gut gemacht!</h2>
+                    <p>Du kennst dich nun mit dem Verb <b>ляпнуть</b> aus.</p>
+                    <button class="next-btn" onclick="location.reload()">Neustart</button>
+                </div>`;
+        }
+    };
+
+    loadQuestion();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontext-Quiz: ляпнуть</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h2 { text-align: center; color: var(--primary); }
+        p.instr { text-align: center; color: #64748b; margin-bottom: 25px; }
+
+        .drop-zones {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 600px) {
+            .drop-zones { grid-template-columns: 1fr; }
+        }
+
+        .zone {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+            min-height: 150px;
+            background: #fff;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .zone.target-active {
+            border-color: var(--primary);
+            background: #eff6ff;
+            transform: scale(1.02);
+        }
+
+        .zone h3 {
+            margin-top: 0;
+            font-size: 1rem;
+            text-align: center;
+            color: #1e293b;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 10px;
+        }
+
+        .item-pool {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            min-height: 100px;
+        }
+
+        .draggable-item {
+            background: white;
+            border: 2px solid var(--primary);
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .draggable-item.selected {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+        }
+
+        .draggable-item.shake {
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); background-color: #fee2e2; border-color: var(--error); }
+            75% { transform: translateX(10px); background-color: #fee2e2; border-color: var(--error); }
+        }
+
+        .placed-item {
+            background: #f0fdf4;
+            border: 1px solid var(--success);
+            color: #166534;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        .feedback-msg {
+            text-align: center;
+            height: 30px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .restart-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <h2>Kontext-Zuordnung: ляпнуть</h2>
+    <p class="instr">Klicke einen Satz an und wähle dann die passende Kategorie.</p>
+
+    <div class="drop-zones">
+        <div class="zone" id="zone-geheimnis" onclick="attemptPlace('geheimnis')">
+            <h3>📁 Geheimnis verraten</h3>
+            <div id="list-geheimnis"></div>
+        </div>
+        <div class="zone" id="zone-dummheit" onclick="attemptPlace('dummheit')">
+            <h3>💡 Etwas Dummes sagen</h3>
+            <div id="list-dummheit"></div>
+        </div>
+    </div>
+
+    <div id="feedback-msg" class="feedback-msg"></div>
+
+    <div class="item-pool" id="pool"></div>
+</div>
+
+<script>
+    // Hier sind alle Sätze aus dem Transkript hinterlegt
+    const sentences = [
+        { id: 1, text: "Я случайно ляпнул об этом, когда говорил с Таней.", cat: "geheimnis" },
+        { id: 2, text: "На экзамене я ляпнула такую глупость.", cat: "dummheit" },
+        { id: 3, text: "Ваня рассказал мне свой секрет, а я ляпнул.", cat: "geheimnis" },
+        { id: 4, text: "Я сказала что-то глупое, не подумав.", cat: "dummheit" },
+        { id: 5, text: "Об этом секрете говорить нельзя, а я ляпнул.", cat: "geheimnis" },
+        { id: 6, text: "Я ляпнула то, что нельзя было говорить на экзамене.", cat: "dummheit" }
+    ];
+
+    let selectedId = null;
+
+    function init() {
+        const pool = document.getElementById('pool');
+        pool.innerHTML = '';
+        // Sätze mischen und anzeigen
+        [...sentences].sort(() => Math.random() - 0.5).forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'draggable-item';
+            div.id = `item-${item.id}`;
+            div.innerText = item.text;
+            div.onclick = (e) => {
+                e.stopPropagation();
+                selectItem(item.id);
+            };
+            pool.appendChild(div);
+        });
+    }
+
+    function selectItem(id) {
+        if (selectedId) {
+            const prev = document.getElementById(`item-${selectedId}`);
+            if(prev) prev.classList.remove('selected');
+        }
+        selectedId = id;
+        document.getElementById(`item-${selectedId}`).classList.add('selected');
+        document.querySelectorAll('.zone').forEach(z => z.classList.add('target-active'));
+        showFeedback("Wähle nun eine Kategorie oben!", "#2563eb");
+    }
+
+    function attemptPlace(category) {
+        if (!selectedId) return;
+
+        const item = sentences.find(s => s.id === selectedId);
+        const element = document.getElementById(`item-${selectedId}`);
+
+        if (item.cat === category) {
+            // Erfolg
+            const list = document.getElementById(`list-${category}`);
+            const div = document.createElement('div');
+            div.className = 'placed-item';
+            div.innerText = "✅ " + item.text;
+            list.appendChild(div);
+            
+            element.remove();
+            selectedId = null;
+            showFeedback("Richtig! Gut zugeordnet.", "#22c55e");
+            checkWin();
+        } else {
+            // Fehler
+            element.classList.remove('selected');
+            element.classList.add('shake');
+            showFeedback("Das passt nicht. Überlege nochmal!", "#ef4444");
+            
+            setTimeout(() => {
+                element.classList.remove('shake');
+            }, 400);
+            selectedId = null;
+        }
+        
+        document.querySelectorAll('.zone').forEach(z => z.classList.remove('target-active'));
+    }
+
+    function showFeedback(text, color) {
+        const msg = document.getElementById('feedback-msg');
+        msg.innerText = text;
+        msg.style.color = color;
+    }
+
+    function checkWin() {
+        if (document.querySelectorAll('.draggable-item').length === 0) {
+            showFeedback("Hervorragend! Alle Situationen sind geklärt. 🎉", "#22c55e");
+            document.getElementById('pool').innerHTML = '<button class="restart-btn" onclick="location.reload()">Nochmal starten</button>';
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>

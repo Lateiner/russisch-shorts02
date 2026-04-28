@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Swipe-Quiz: ляпнуть</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f1f5f9;
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none; /* Verhindert Standard-Scrolling beim Swipen */
+        }
+
+        .header {
+            text-align: center;
+            padding: 10px;
+            position: absolute;
+            top: 10px;
+        }
+
+        .card-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            perspective: 1000px;
+        }
+
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            box-sizing: border-box;
+            cursor: grab;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            user-select: none;
+        }
+
+        .card h3 {
+            color: #1e293b;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .card p {
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .controls {
+            margin-top: 40px;
+            display: flex;
+            gap: 40px;
+        }
+
+        .btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.9); }
+        .btn-no { background: var(--error); }
+        .btn-yes { background: var(--success); }
+
+        .hint {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .indicator {
+            position: absolute;
+            top: 20px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.5rem;
+            opacity: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .ind-yes { border: 4px solid var(--success); color: var(--success); right: 20px; transform: rotate(15deg); }
+        .ind-no { border: 4px solid var(--error); color: var(--error); left: 20px; transform: rotate(-15deg); }
+
+        #final-screen {
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Passt „ляпнуть“?</h2>
+        <p>Links: Nein | Rechts: Ja</p>
+    </div>
+
+    <div id="game-area">
+        <div class="card-container" id="container">
+            </div>
+
+        <div class="controls">
+            <button class="btn btn-no" onclick="swipe('left')">✕</button>
+            <button class="btn btn-yes" onclick="swipe('right')">✓</button>
+        </div>
+    </div>
+
+    <div id="final-screen">
+        <h2>Super gemacht!</h2>
+        <p id="score-text"></p>
+        <button onclick="location.reload()" style="padding: 10px 20px; margin-top: 20px; cursor: pointer;">Neustart</button>
+    </div>
+
+    <div class="hint">Wische die Karte oder nutze die Buttons</div>
+
+<script>
+    const situations = [
+        { text: "Ein Freund erzählt dir ein Geheimnis und du sagst es versehentlich weiter.", fits: true },
+        { text: "Du hältst eine perfekt vorbereitete Rede vor dem Schulleiter.", fits: false },
+        { text: "In einer mündlichen Prüfung sagst du etwas völlig Dummes, ohne zu denken.", fits: true },
+        { text: "Du schreibst eine wissenschaftliche Analyse über russische Grammatik.", fits: false },
+        { text: "Du plauderst beim Kaffeeklatsch aus Versehen ein privates Detail aus.", fits: true },
+        { text: "Du liest langsam und betont ein Gedicht von Puschkin vor.", fits: false }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+
+    const container = document.getElementById('container');
+
+    function createCard(idx) {
+        if (idx >= situations.length) {
+            showFinal();
+            return;
+        }
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.zIndex = situations.length - idx;
+        card.innerHTML = `
+            <div class="indicator ind-yes">JA</div>
+            <div class="indicator ind-no">NEIN</div>
+            <h3>Situation ${idx + 1}</h3>
+            <p>${situations[idx].text}</p>
+        `;
+
+        // Touch Events
+        card.addEventListener('touchstart', (e) => startDrag(e.touches[0].clientX));
+        card.addEventListener('touchmove', (e) => moveDrag(e.touches[0].clientX, card));
+        card.addEventListener('touchend', () => endDrag(card));
+
+        // Mouse Events
+        card.addEventListener('mousedown', (e) => startDrag(e.clientX));
+        window.addEventListener('mousemove', (e) => { if(isDragging) moveDrag(e.clientX, card); });
+        window.addEventListener('mouseup', () => { if(isDragging) endDrag(card); });
+
+        container.appendChild(card);
+    }
+
+    function startDrag(x) {
+        startX = x;
+        isDragging = true;
+    }
+
+    function moveDrag(x, card) {
+        currentX = x - startX;
+        const rotation = currentX / 10;
+        card.style.transform = `translateX(${currentX}px) rotate(${rotation}deg)`;
+        
+        const yesInd = card.querySelector('.ind-yes');
+        const noInd = card.querySelector('.ind-no');
+        
+        if (currentX > 50) { yesInd.style.opacity = currentX / 100; noInd.style.opacity = 0; }
+        else if (currentX < -50) { noInd.style.opacity = Math.abs(currentX) / 100; yesInd.style.opacity = 0; }
+        else { yesInd.style.opacity = 0; noInd.style.opacity = 0; }
+    }
+
+    function endDrag(card) {
+        isDragging = false;
+        if (currentX > 100) { handleChoice('right', card); }
+        else if (currentX < -100) { handleChoice('left', card); }
+        else {
+            card.style.transform = '';
+            card.querySelector('.ind-yes').style.opacity = 0;
+            card.querySelector('.ind-no').style.opacity = 0;
+        }
+        currentX = 0;
+    }
+
+    function swipe(dir) {
+        const card = container.lastChild;
+        if (!card) return;
+        handleChoice(dir, card);
+    }
+
+    function handleChoice(dir, card) {
+        const correctDir = situations[currentIdx].fits ? 'right' : 'left';
+        if (dir === correctDir) score++;
+
+        const flyX = dir === 'right' ? 1000 : -1000;
+        card.style.transform = `translateX(${flyX}px) rotate(${dir === 'right' ? 45 : -45}deg)`;
+        card.style.opacity = '0';
+
+        setTimeout(() => {
+            card.remove();
+            currentIdx++;
+            createCard(currentIdx);
+        }, 300);
+    }
+
+    function showFinal() {
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('final-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `Du hast ${score} von ${situations.length} Situationen richtig eingeschätzt!`;
+    }
+
+    // Initialisiere erste Karte
+    createCard(currentIdx);
+</script>
+</body>
+</html>

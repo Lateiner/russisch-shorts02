@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bild-Situationen zuordnen: ляпнуть</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .instruction {
+            color: #64748b;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .situation-card {
+            border: 3px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: white;
+            position: relative;
+        }
+
+        .situation-card:hover:not(.locked) {
+            transform: translateY(-3px);
+            border-color: var(--primary);
+        }
+
+        .situation-card.selected {
+            border-color: var(--primary);
+            background-color: #eff6ff;
+        }
+
+        .situation-card.correct {
+            border-color: var(--success);
+            background-color: #f0fdf4;
+        }
+
+        .situation-card.wrong {
+            border-color: var(--error);
+            background-color: #fef2f2;
+        }
+
+        .icon-box {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .situation-title {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .situation-card p {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+
+        .btn-check { background: var(--primary); color: white; }
+        .btn-reset { background: #64748b; color: white; display: none; }
+
+        #feedback {
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        .russian-word { color: var(--primary); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Passt das Verb <span class="russian-word">ляпнуть</span>?</h2>
+    <p class="instruction">Wähle alle Situationen aus, in denen man typischerweise unbedacht etwas „raushaut“.</p>
+
+    <div class="grid" id="grid">
+        <div class="situation-card" onclick="toggleCard(this)" data-correct="true">
+            <div class="icon-box">📝</div>
+            <div class="situation-title">Prüfung</div>
+            <p>Vor Aufregung sagst du plötzlich etwas Unsinniges.</p>
+        </div>
+
+        <div class="situation-card" onclick="toggleCard(this)" data-correct="true">
+            <div class="icon-box">🤫</div>
+            <div class="situation-title">Geheimnis</div>
+            <p>Du erzählst aus Versehen etwas, das privat bleiben sollte.</p>
+        </div>
+
+        <div class="situation-card" onclick="toggleCard(this)" data-correct="false">
+            <div class="icon-box">🎤</div>
+            <div class="situation-title">Festrede</div>
+            <p>Ein Redner liest ein sorgfältig geschriebenes Manuskript vor.</p>
+        </div>
+
+        <div class="situation-card" onclick="toggleCard(this)" data-correct="true">
+            <div class="icon-box">☕</div>
+            <div class="situation-title">Kaffeeklatsch</div>
+            <p>Im schnellen Gespräch rutscht dir eine dumme Bemerkung raus.</p>
+        </div>
+
+        <div class="situation-card" onclick="toggleCard(this)" data-correct="false">
+            <div class="icon-box">📄</div>
+            <div class="situation-title">Vertrag</div>
+            <p>Ein Anwalt prüft jedes Wort in einem Dokument ganz genau.</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-check" id="check-btn" onclick="checkSelection()">Auswahl prüfen</button>
+        <button class="btn btn-reset" id="reset-btn" onclick="resetQuiz()">Neustart</button>
+    </div>
+    <div id="feedback"></div>
+</div>
+
+<script>
+    function toggleCard(element) {
+        if (element.classList.contains('locked')) return;
+        element.classList.toggle('selected');
+        document.getElementById('feedback').innerText = "";
+    }
+
+    function checkSelection() {
+        const cards = document.querySelectorAll('.situation-card');
+        const feedback = document.getElementById('feedback');
+        let allCorrect = true;
+
+        cards.forEach(card => {
+            const isCorrectAnswer = card.getAttribute('data-correct') === 'true';
+            const isSelected = card.classList.contains('selected');
+
+            card.classList.remove('selected');
+            card.classList.add('locked');
+
+            if (isSelected && isCorrectAnswer) {
+                card.classList.add('correct');
+            } else if (isSelected && !isCorrectAnswer) {
+                card.classList.add('wrong');
+                allCorrect = false;
+            } else if (!isSelected && isCorrectAnswer) {
+                card.classList.add('wrong'); // Eigentlich hätte es gewählt werden müssen
+                allCorrect = false;
+            } else {
+                card.classList.add('correct'); // Richtigerweise nicht gewählt
+            }
+        });
+
+        if (allCorrect) {
+            feedback.innerText = "Hervorragend! Du hast den umgangssprachlichen Charakter des Wortes genau verstanden. ✅";
+            feedback.style.color = "var(--success)";
+        } else {
+            feedback.innerText = "Nicht ganz richtig. „Ляпнуть“ nutzt man für unbedachte, spontane Fehler. ❌";
+            feedback.style.color = "var(--error)";
+        }
+
+        document.getElementById('check-btn').style.display = 'none';
+        document.getElementById('reset-btn').style.display = 'inline-block';
+    }
+
+    function resetQuiz() {
+        const cards = document.querySelectorAll('.situation-card');
+        cards.forEach(card => {
+            card.className = 'situation-card';
+        });
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('check-btn').style.display = 'inline-block';
+        document.getElementById('reset-btn').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>

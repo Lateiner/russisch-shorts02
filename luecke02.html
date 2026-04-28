@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lückentext: Das Verb ляпнуть</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        h2 { color: var(--primary); text-align: center; margin-top: 0; }
+        p.instr { text-align: center; color: #64748b; margin-bottom: 2rem; }
+
+        .quiz-item {
+            background: #f1f5f9;
+            padding: 1.2rem;
+            border-radius: 0.8rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+            font-size: 1.1rem;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .quiz-item.correct { border-color: var(--success); background: #f0fdf4; }
+        .quiz-item.wrong { border-color: var(--error); background: #fef2f2; }
+
+        select {
+            font-size: 1rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 2px solid var(--primary);
+            background: white;
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: bold;
+            outline: none;
+        }
+
+        select:disabled {
+            border-color: #cbd5e1;
+            color: #64748b;
+            cursor: default;
+            appearance: none; /* Entfernt Pfeil bei Erfolg */
+        }
+
+        .status-icon {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        .final-msg {
+            text-align: center;
+            margin-top: 2rem;
+            font-weight: bold;
+            color: var(--success);
+            display: none;
+        }
+
+        .btn-reload {
+            display: block;
+            margin: 1rem auto;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Lückentext-Übung</h2>
+    <p class="instr">Wähle das passendste Wort für die Lücke aus.</p>
+
+    <div id="quiz-list">
+        </div>
+
+    <div id="final-msg" class="final-msg">
+        🎉 Klasse! Du hast alle Sätze richtig vervollständigt.
+        <button class="btn-reload" onclick="location.reload()">Nochmal üben</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            textBefore: "Ваня рассказал мне секрет, а я случайно ",
+            textAfter: " об этом Тане.",
+            options: ["подумал", "ляпнул", "прочитал"],
+            correct: "ляпнул"
+        },
+        {
+            textBefore: "Ой, я ",
+            textAfter: " такую глупость на экзамене!",
+            options: ["ляпнула", "сделала", "хотела"],
+            correct: "ляпнула"
+        },
+        {
+            textBefore: "Это был большой секрет, и о нём нельзя было ",
+            textAfter: ".",
+            options: ["ляпнуть", "забыть", "смотреть"],
+            correct: "ляпнуть"
+        },
+        {
+            textBefore: "Я не хотел это говорить, я просто ",
+            textAfter: " не подумав.",
+            options: ["написал", "увидел", "ляпнул"],
+            correct: "ляпнул"
+        },
+        {
+            textBefore: "Когда мы говорили, я случайно ",
+            textAfter: " лишнее.",
+            options: ["купил", "ляпнул", "понял"],
+            correct: "ляпнул"
+        }
+    ];
+
+    const quizList = document.getElementById('quiz-list');
+    let solvedCount = 0;
+
+    function initQuiz() {
+        quizData.forEach((data, index) => {
+            const div = document.createElement('div');
+            div.className = 'quiz-item';
+            div.id = `item-${index}`;
+
+            // Dropdown erstellen
+            let selectHtml = `<select id="select-${index}" onchange="checkAnswer(${index})">
+                                <option value="" selected disabled>...</option>`;
+            
+            // Optionen mischen
+            const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
+            shuffledOptions.forEach(opt => {
+                selectHtml += `<option value="${opt}">${opt}</option>`;
+            });
+            selectHtml += `</select>`;
+
+            div.innerHTML = `${data.textBefore} ${selectHtml} ${data.textAfter} <span id="status-${index}" class="status-icon"></span>`;
+            quizList.appendChild(div);
+        });
+    }
+
+    window.checkAnswer = function(index) {
+        const select = document.getElementById(`select-${index}`);
+        const status = document.getElementById(`status-${index}`);
+        const item = document.getElementById(`item-${index}`);
+        const selectedValue = select.value;
+
+        if (selectedValue === quizData[index].correct) {
+            item.classList.remove('wrong');
+            item.classList.add('correct');
+            status.innerText = "✅";
+            select.disabled = true;
+            solvedCount++;
+            checkFinalStatus();
+        } else {
+            item.classList.add('wrong');
+            status.innerText = "❌ Versuch es nochmal!";
+            status.style.color = "var(--error)";
+            status.style.fontSize = "0.8rem";
+            
+            // Kurzes Feedback-Verschwinden
+            setTimeout(() => {
+                if (!select.disabled) {
+                    status.innerText = "";
+                    item.classList.remove('wrong');
+                }
+            }, 2000);
+        }
+    };
+
+    function checkFinalStatus() {
+        if (solvedCount === quizData.length) {
+            document.getElementById('final-msg').style.display = 'block';
+        }
+    }
+
+    initQuiz();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio-Quiz: ляпнуть</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 550px;
+            width: 100%;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .audio-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            font-size: 1.8rem;
+            cursor: pointer;
+            margin: 15px 0;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .audio-btn:hover { background: #1d4ed8; transform: scale(1.05); }
+        .audio-btn:active { transform: scale(0.95); }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .option {
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            padding: 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .option:hover:not(.disabled) { border-color: var(--primary); background: #f0f9ff; }
+        .option.correct { border-color: var(--success); background: #f0fdf4; color: #166534; }
+        .option.wrong { border-color: var(--error); background: #fef2f2; color: #991b1b; }
+        .option.disabled { cursor: default; }
+
+        #feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        .btn-next {
+            margin-top: 15px;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            width: 100%;
+            font-weight: bold;
+        }
+
+        .progress { font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="progress" id="progress">Aufgabe 1 von 6</div>
+    <h2>Hörverstehen</h2>
+    <p style="color: #64748b; font-size: 0.9rem;">Höre den russischen Satz und wähle die passende Bedeutung.</p>
+
+    <button class="audio-btn" onclick="playAudio()" title="Satz anhören">🔊</button>
+
+    <div class="options-list" id="options"></div>
+
+    <div id="feedback"></div>
+    <button class="btn-next" id="next-btn" onclick="nextQuestion()">Nächste Aufgabe</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            russian: "Я случайно ляпнул об этом при Тане.",
+            options: ["Ich habe es Tanja absichtlich erzählt.", "Ich habe es vor Tanja versehentlich ausgeplaudert.", "Tanja hat mir ein Geheimnis verraten."],
+            correct: 1
+        },
+        {
+            russian: "На экзамене я ляпнула такую глупость.",
+            options: ["In der Prüfung habe ich totalen Quatsch verzapft.", "Die Prüfung war sehr einfach für mich.", "Ich habe in der Prüfung gar nichts gesagt."],
+            correct: 0
+        },
+        {
+            russian: "Ваня просил молчать, но я ляпнул.",
+            options: ["Wanja wollte reden, aber ich schwieg.", "Wanja bat mich zu schweigen, aber ich hab's rausgehauen.", "Ich habe Wanja gebeten, leise zu sein."],
+            correct: 1
+        },
+        {
+            russian: "Я ляпнула это, не подумав о последствиях.",
+            options: ["Ich habe lange über die Konsequenzen nachgedacht.", "Ich habe das gesagt, ohne über die Folgen nachzudenken.", "Ich wusste genau, was ich sage."],
+            correct: 1
+        },
+        {
+            russian: "Не подумав, я ляпнул какую-то ерунду.",
+            options: ["Ohne zu überlegen, habe ich irgendeinen Blödsinn gelabert.", "Ich habe eine kluge Entscheidung getroffen.", "Ich habe mir alles gut überlegt."],
+            correct: 0
+        },
+        {
+            russian: "Это был секрет, а я взял и ляпнул.",
+            options: ["Es war ein Geheimnis, und ich habe es bewahrt.", "Ich habe das Geheimnis für mich behalten.", "Es war ein Geheimnis, aber ich hab's einfach ausgeplaudert."],
+            correct: 2
+        }
+    ];
+
+    let currentQ = 0;
+    let answered = false;
+
+    function init() {
+        const q = questions[currentQ];
+        document.getElementById('progress').innerText = `Aufgabe ${currentQ + 1} von ${questions.length}`;
+        const optionsContainer = document.getElementById('options');
+        optionsContainer.innerHTML = "";
+        document.getElementById('feedback').innerText = "";
+        document.getElementById('next-btn').style.display = "none";
+        answered = false;
+
+        q.options.forEach((opt, index) => {
+            const div = document.createElement('div');
+            div.className = 'option';
+            div.innerText = opt;
+            div.onclick = () => checkAnswer(index, div);
+            optionsContainer.appendChild(div);
+        });
+    }
+
+    function playAudio() {
+        window.speechSynthesis.cancel(); // Stop current speech
+        const text = questions[currentQ].russian;
+        const msg = new SpeechSynthesisUtterance();
+        msg.text = text;
+        msg.lang = 'ru-RU';
+        msg.rate = 0.85;
+        window.speechSynthesis.speak(msg);
+    }
+
+    function checkAnswer(index, element) {
+        if (answered) return;
+        answered = true;
+
+        const correctIndex = questions[currentQ].correct;
+        const feedback = document.getElementById('feedback');
+        const allOptions = document.querySelectorAll('.option');
+
+        allOptions.forEach(opt => opt.classList.add('disabled'));
+
+        if (index === correctIndex) {
+            element.classList.add('correct');
+            feedback.innerText = "Richtig! ✅";
+            feedback.style.color = "var(--success)";
+        } else {
+            element.classList.add('wrong');
+            feedback.innerText = "Leider falsch. ❌";
+            feedback.style.color = "var(--error)";
+            allOptions[correctIndex].classList.add('correct');
+        }
+
+        document.getElementById('next-btn').style.display = "block";
+        if (currentQ === questions.length - 1) {
+            document.getElementById('next-btn').innerText = "Quiz abschließen";
+        }
+    }
+
+    function nextQuestion() {
+        currentQ++;
+        if (currentQ < questions.length) {
+            init();
+        } else {
+            document.querySelector('.container').innerHTML = `
+                <h2 style="color: var(--success);">Hervorragend!</h2>
+                <p>Du hast alle 6 Audio-Aufgaben bearbeitet.</p>
+                <div style="font-size: 4rem; margin: 20px 0;">🎉</div>
+                <button class="btn-next" style="display:block" onclick="location.reload()">Nochmal starten</button>
+            `;
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>

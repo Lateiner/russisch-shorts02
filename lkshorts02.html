@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vokabel-Lernkartei: ляпнуть</title>
+    <style>
+        :root {
+            --primary-green: #2d5a27;
+            --medium-green: #4a7c44;
+            --light-green: #eef5ee;
+            --accent-green: #86efac;
+            --white: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-green);
+            color: #333;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            color: var(--primary-green);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .progress {
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: var(--medium-green);
+            font-size: 1.1rem;
+        }
+
+        /* 3D Karte */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 300px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 25px var(--shadow);
+            border-radius: 15px;
+        }
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: var(--white);
+            border: 2px solid var(--medium-green);
+        }
+
+        .card-face-back {
+            background-color: var(--medium-green);
+            color: var(--white);
+            transform: rotateY(180deg);
+        }
+
+        .vocal-text {
+            font-size: 2rem;
+            font-weight: bold;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+
+        .note {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-style: italic;
+        }
+
+        /* Navigation & Buttons */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .secondary-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: var(--medium-green);
+            color: white;
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        button:hover {
+            background-color: var(--primary-green);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-mix { background-color: #6b7280; }
+        .btn-start { background-color: #374151; }
+
+        @media (max-width: 480px) {
+            .vocal-text { font-size: 1.5rem; }
+            .card-container { height: 250px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Lernkartei: ляпнуть</h1>
+    <p>Interaktives Training für russische Verben & Vokabeln</p>
+</header>
+
+<div class="container">
+    <div class="progress" id="progress-display">1 / 27</div>
+
+    <div class="card-container" id="card-trigger">
+        <div class="card" id="card-element">
+            <div class="card-face card-face-front">
+                <div class="vocal-text" id="front-text">Lade...</div>
+            </div>
+            <div class="card-face card-face-back">
+                <div class="vocal-text" id="back-text">Lade...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="prev-btn">← Vorherige</button>
+        <button id="next-btn">Nächste →</button>
+    </div>
+
+    <div class="secondary-controls">
+        <button class="btn-mix" id="mix-btn">🔀 Mischen</button>
+        <button class="btn-start" id="home-btn">🏠 An den Anfang</button>
+    </div>
+</div>
+
+<script>
+    // Rohdaten der Vokabelliste
+    const rawData = [
+        ["ля́пать / ля́пнуть", "unbedacht sagen, herausplatzen, raushauen"],
+        ["говори́ть / сказа́ть", "sagen, sprechen"],
+        ["прогова́риваться / проговори́ться", "sich verplappern, ein Geheimnis ausplaudern"],
+        ["болта́ть / поболта́ть", "plaudern, schwatzen"],
+        ["заявля́ть / заяви́ть", "erklären, verkünden, behaupten"],
+        ["шепта́ть / прошепта́ть", "flüstern"],
+        ["молча́ть / помолча́ть", "schweigen"],
+        ["ду́мать / поду́мать", "denken, nachdenken"],
+        ["ошиба́ться / ошиби́ться", "sich irren, einen Fehler machen"],
+        ["обсужда́ть / обсуди́ть", "besprechen, diskutieren"],
+        ["случа́йно", "zufällig, versehentlich"],
+        ["неподу́мав", "ohne nachzudenken"],
+        ["глу́пость", "Dummheit, Quatsch, Blödsinn"],
+        ["ерунда́", "Unsinn, Larifari"],
+        ["секре́т", "Geheimnis"],
+        ["экза́мен", "Prüfung"],
+        ["после́дствие", "Konsequenz, Folge"],
+        ["ситуа́ция", "Situation"],
+        ["коммента́рий", "Kommentar"],
+        ["при́мер", "Beispiel"],
+        ["ли́шнее", "Überflüssiges, zu viel (Gesagtes)"],
+        ["вслух", "laut (aussprechen)"],
+        ["неча́янно", "aus Versehen, unabsichtlich"],
+        ["внима́тельно", "aufmerksam"],
+        ["осторо́жно", "vorsichtig"],
+        ["Та́ня", "Tanja"],
+        ["Ва́ня", "Wanja"]
+    ];
+
+    let cards = [...rawData];
+    let currentIndex = 0;
+
+    const cardElement = document.getElementById('card-element');
+    const frontText = document.getElementById('front-text');
+    const backText = document.getElementById('back-text');
+    const progressDisplay = document.getElementById('progress-display');
+
+    // Karte aktualisieren
+    function updateCard() {
+        // Karte erst zurückdrehen, falls sie geflippt ist
+        cardElement.classList.remove('is-flipped');
+        
+        // Kleine Verzögerung für die Animation beim Wechseln
+        setTimeout(() => {
+            const currentData = cards[currentIndex];
+            frontText.innerText = currentData[0];
+            backText.innerText = currentData[1];
+            progressDisplay.innerText = `${currentIndex + 1} / ${cards.length}`;
+            adjustFontSize(frontText);
+            adjustFontSize(backText);
+        }, 150);
+    }
+
+    // Schriftgröße dynamisch anpassen
+    function adjustFontSize(element) {
+        const length = element.innerText.length;
+        if (length > 40) {
+            element.style.fontSize = "1.2rem";
+        } else if (length > 20) {
+            element.style.fontSize = "1.5rem";
+        } else {
+            element.style.fontSize = "2rem";
+        }
+    }
+
+    // Flip Funktion
+    function flipCard() {
+        cardElement.classList.toggle('is-flipped');
+    }
+
+    // Navigation
+    function nextCard() {
+        if (currentIndex < cards.length - 1) {
+            currentIndex++;
+            updateCard();
+        }
+    }
+
+    function prevCard() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCard();
+        }
+    }
+
+    // Mischen (Fisher-Yates Shuffle)
+    function shuffleCards() {
+        for (let i = cards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cards[i], cards[j]] = [cards[j], cards[i]];
+        }
+        currentIndex = 0;
+        updateCard();
+    }
+
+    function goToStart() {
+        currentIndex = 0;
+        updateCard();
+    }
+
+    // Event Listener für Klicks
+    document.getElementById('card-trigger').addEventListener('click', flipCard);
+    document.getElementById('next-btn').addEventListener('click', nextCard);
+    document.getElementById('prev-btn').addEventListener('click', prevCard);
+    document.getElementById('mix-btn').addEventListener('click', shuffleCards);
+    document.getElementById('home-btn').addEventListener('click', goToStart);
+
+    // Tastatursteuerung
+    document.addEventListener('keydown', (e) => {
+        switch(e.key) {
+            case ' ':
+            case 'Enter':
+                e.preventDefault(); // Verhindert Scrollen bei Leertaste
+                flipCard();
+                break;
+            case 'ArrowRight':
+                nextCard();
+                break;
+            case 'ArrowLeft':
+                prevCard();
+                break;
+            case 'Home':
+                goToStart();
+                break;
+        }
+    });
+
+    // Initialisierung
+    updateCard();
+</script>
+
+</body>
+</html>
